@@ -1,0 +1,195 @@
+name: Version Management
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+
+permissions:
+  contents: write
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get current version
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Get commit messages
+        id: commit-messages
+        run: |
+          # 获取最新标签之后的所有提交信息
+          if [ $(git tag -l | wc -l) -eq 0 ]; then
+            COMMITS=$(git log --pretty=format:"%s" $(git rev-list --max-parents=0 HEAD)..HEAD)
+          else
+            LATEST_TAG=$(git describe --tags --abbrev=0)
+            COMMITS=$(git log --pretty=format:"%s" $LATEST_TAG..HEAD)
+          fi
+          
+          echo "messages=$COMMITS" >> $GITHUB_OUTPUT
+          echo "Commit messages:"
+          echo "$COMMITS"
+
+      - name: Determine version bump type
+        id: version-type
+        run: |
+          COMMITS="${{ steps.commit-messages.outputs.messages }}"
+          
+          # 检查是否包含破坏性更新关键词
+          if echo "$COMMITS" | grep -qiE "BREAKING CHANGE|major|!:|破坏性|重大更新"; then
+            VERSION_TYPE="major"
+            echo "type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+            echo "Version bump type: MAJOR"
+          # 检查是否包含新功能关键词
+          elif echo "$COMMITS" | grep -qiE "feat|feature|新增|添加|new|add"; then
+            VERSION_TYPE="minor"
+            echo "type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+            echo "Version bump type: MINOR"
+          # 否则为补丁更新
+          else
+            VERSION_TYPE="patch"
+            echo "type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+            echo "Version bump type: PATCH"
+          fi
+
+      - name: Calculate new version
+        id: new-version
+        run: |
+          CURRENT="${{ steps.current-version.outputs.version }}"
+          TYPE="${{ steps.version-type.outputs.type }}"
+          
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+          
+          case $TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Update package.json version
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          npm version $NEW_VERSION --no-git-tag-version
+          echo "Updated package.json to version: $NEW_VERSION"
+
+      - name: Update README version
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          RELEASE_DATE=$(date +"%Y-%m-%d")
+          
+          # 在README顶部添加版本更新记录
+          if grep -q "## 版本更新记录" README.md; then
+            # 如果已存在版本记录部分，在后面添加新版本
+            sed -i "/## 版本更新记录/a\\n### $NEW_VERSION - $RELEASE_DATE\\n\\n待补充更新内容...\\n" README.md
+          else
+            # 如果不存在，添加到文件末尾
+            echo -e "\\n\\n## 版本更新记录\\n\\n### $NEW_VERSION - $RELEASE_DATE\\n\\n待补充更新内容..." >> README.md
+          fi
+          
+          echo "Updated README.md"
+
+      - name: Create CHANGELOG entry
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          RELEASE_DATE=$(date +"%Y-%m-%d")
+          COMMITS="${{ steps.commit-messages.outputs.messages }}"
+          
+          # 创建changelog条目
+          cat > CHANGELOG_TMP.md << EOF
+          ## [$NEW_VERSION] - $RELEASE_DATE
+          
+          ### 提交记录
+          $(echo "$COMMITS" | sed 's/^/- /')
+          
+          EOF
+          
+          # 如果CHANGELOG存在，将新内容插入到开头
+          if [ -f CHANGELOG.md ]; then
+            cat CHANGELOG_TMP.md CHANGELOG.md > CHANGELOG_NEW.md
+            mv CHANGELOG_NEW.md CHANGELOG.md
+          else
+            mv CHANGELOG_TMP.md CHANGELOG.md
+          fi
+          
+          rm -f CHANGELOG_TMP.md
+          echo "Updated CHANGELOG.md"
+
+      - name: Create git tag
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          echo "Created tag: v$NEW_VERSION"
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add package.json README.md CHANGELOG.md
+          git commit -m "chore(release): bump version to ${{ steps.new-version.outputs.version }}"
+          
+          git push origin main
+          git push origin "v${{ steps.new-version.outputs.version }}"
+          
+          echo "Changes pushed successfully"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new-version.outputs.version }}
+          release_name: Release v${{ steps.new-version.outputs.version }}
+          body: |
+            ## 更新内容 v${{ steps.new-version.outputs.version }}
+            
+            发布日期: $(date +"%Y-%m-%d")
+            
+            ### 变更日志
+            查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) 获取详细信息
+          draft: false
+          prerelease: false
+
+      - name: Display version info
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  版本更新完成"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  旧版本: ${{ steps.current-version.outputs.version }}"
+          echo "  新版本: ${{ steps.new-version.outputs.version }}"
+          echo "  更新类型: ${{ steps.version-type.outputs.type }}"
+          echo "  Git标签: v${{ steps.new-version.outputs.version }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
