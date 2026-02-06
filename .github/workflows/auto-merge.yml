@@ -1,19 +1,24 @@
-name: Auto Merge Pull Requests
+name: Auto Approve and Merge Pull Requests
 
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-  pull_request_review:
-    types: [submitted]
 
 permissions:
   pull-requests: write
   contents: write
 
 jobs:
-  auto-merge:
+  auto-approve-merge:
     runs-on: ubuntu-latest
     steps:
+      - name: Approve PR
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          review-message: "Auto-approved by GitHub Actions"
+          require-minimum-reviews: 0
+
       - name: Auto merge PR
         uses: pascalgn/automerge-action@v0.16.3
         env:

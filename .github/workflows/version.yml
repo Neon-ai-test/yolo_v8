@@ -36,21 +36,23 @@ jobs:
         run: |
           # 获取最新标签之后的所有提交信息
           if [ $(git tag -l | wc -l) -eq 0 ]; then
-            COMMITS=$(git log --pretty=format:"%s" $(git rev-list --max-parents=0 HEAD)..HEAD)
+            git log --pretty=format:"%s" $(git rev-list --max-parents=0 HEAD)..HEAD > /tmp/commits.txt
           else
             LATEST_TAG=$(git describe --tags --abbrev=0)
-            COMMITS=$(git log --pretty=format:"%s" $LATEST_TAG..HEAD)
+            git log --pretty=format:"%s" $LATEST_TAG..HEAD > /tmp/commits.txt
           fi
-          
-          echo "messages=$COMMITS" >> $GITHUB_OUTPUT
+
           echo "Commit messages:"
-          echo "$COMMITS"
+          cat /tmp/commits.txt
 
       - name: Determine version bump type
         id: version-type
         run: |
-          COMMITS="${{ steps.commit-messages.outputs.messages }}"
-          
+          COMMITS=$(cat /tmp/commits.txt)
+
+          echo "Processing commits:"
+          echo "$COMMITS"
+
           # 检查是否包含破坏性更新关键词
           if echo "$COMMITS" | grep -qiE "BREAKING CHANGE|major|!:|破坏性|重大更新"; then
             VERSION_TYPE="major"
@@ -124,17 +126,17 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.new-version.outputs.version }}"
           RELEASE_DATE=$(date +"%Y-%m-%d")
-          COMMITS="${{ steps.commit-messages.outputs.messages }}"
-          
+          COMMITS=$(cat /tmp/commits.txt)
+
           # 创建changelog条目
           cat > CHANGELOG_TMP.md << EOF
           ## [$NEW_VERSION] - $RELEASE_DATE
-          
+
           ### 提交记录
           $(echo "$COMMITS" | sed 's/^/- /')
-          
+
           EOF
-          
+
           # 如果CHANGELOG存在，将新内容插入到开头
           if [ -f CHANGELOG.md ]; then
             cat CHANGELOG_TMP.md CHANGELOG.md > CHANGELOG_NEW.md
