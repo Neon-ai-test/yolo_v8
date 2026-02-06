@@ -14,6 +14,7 @@
 - 🎨 **Tailwind CSS v4** - 现代化样式解决方案，支持主题定制
 - ⚡ **Vue 3 + Vite** - 高性能前端框架，快速开发和部署
 - 🔄 **自动版本管理** - GitHub Actions 自动化版本发布
+- 🗑️ **自动清理分支** - PR 合并后自动删除已合并分支，保持仓库整洁
 
 ## 版本信息
 
@@ -62,11 +63,12 @@
    - 等待代码审查和合并
 
 5. **自动发布**
-   - PR 合并到 `main` 分支后，GitHub Actions 自动触发
-   - 自动更新版本号（根据提交类型）
-   - 自动生成 CHANGELOG
-   - 自动创建 Git Tag
-   - 自动创建 GitHub Release
+    - PR 合并到 `main` 分支后，GitHub Actions 自动触发
+    - 自动更新版本号（根据提交类型）
+    - 自动生成 CHANGELOG
+    - 自动创建 Git Tag
+    - 自动创建 GitHub Release
+    - **自动删除已合并的分支** ⭐（保持仓库整洁）
 
 ### 自动化版本管理
 
@@ -79,6 +81,7 @@
 - ✅ 创建 Git Tag（vX.X.X 格式）
 - ✅ 创建 GitHub Release
 - ✅ 推送所有变更到远程仓库
+- ✅ **自动删除已合并的分支** ⭐（保护 main/master 分支）
 
 ### 分支策略
 
@@ -198,7 +201,17 @@ npm run preview
 - 平板端：768px - 1023px
 - 移动端：< 768px
 
+## 文档索引
 
+| 文档 | 说明 |
+|------|------|
+| [README.md](./README.md) | 项目介绍和快速开始 |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 开发指南和提交规范 |
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | 快速启动指南 |
+| [GITHUB_SETUP.md](./GITHUB_SETUP.md) | GitHub 仓库配置指南 |
+| [AUTO_DELETE_BRANCH.md](./AUTO_DELETE_BRANCH.md) | 自动删除分支功能说明 |
+| [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志 |
+| [PROJECT_INIT_REPORT.md](./PROJECT_INIT_REPORT.md) | 项目初始化报告 |
 
 ## License
 
