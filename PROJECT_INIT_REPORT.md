@@ -18,6 +18,7 @@
 - ✅ 自动创建 Git Tag
 - ✅ 自动创建 GitHub Release
 - ✅ 基于提交信息的版本更新规则
+- ✅ **自动删除已合并的分支** ⭐（新增）
 
 ### 3. 文档
 - ✅ README.md - 项目说明文档
@@ -127,11 +128,29 @@ git push -u origin main
 5. 创建 Git Tag (vX.X.X)
 6. 创建 GitHub Release
 7. 推送所有变更
+8. **自动删除已合并的分支** ⭐
 
 ### 版本更新规则
 - **major**: 提交信息包含 `BREAKING CHANGE`, `major`, `!:`, `破坏性`, `重大更新`
 - **minor**: 提交信息包含 `feat`, `feature`, `新增`, `添加`, `new`, `add`
-- **patch**: 其他所有提交
+- **patch`: 其他所有提交
+
+### 自动删除已合并分支 ⭐
+
+GitHub Actions 会在 PR 合并后自动删除已合并的功能分支。
+
+**特性：**
+- 自动检测并删除已合并的分支
+- 保护 main/master 分支不被删除
+- 保持仓库整洁，减少分支数量
+
+**保护规则：**
+- 不删除 `main` 分支
+- 不删除 `master` 分支
+- 仅删除通过 PR 合并的功能分支
+
+**禁用方法：**
+编辑 `.github/workflows/version.yml`，注释或删除 "Delete merged branch" 步骤。
 
 ## 📊 当前版本信息
 

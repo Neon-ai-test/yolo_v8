@@ -11,9 +11,11 @@
 - 🎯 **基于 YOLOv8n 模型** - 使用轻量级 YOLOv8n 模型，提供快速准确的物体识别
 - 💻 **PC 端支持** - 完美适配桌面浏览器，提供良好的交互体验
 - 📱 **移动端 H5** - 响应式设计，适配各种移动设备屏幕
-- 🎨 **Tailwind CSS v4** - 现代化样式解决方案，支持主题定制
+- 🎨 **Tailwind CSS v3** - 现代化样式解决方案，支持主题定制
 - ⚡ **Vue 3 + Vite** - 高性能前端框架，快速开发和部署
+- 🤖 **自动审批合并** - PR 自动审批和合并，无需人工干预 ⭐
 - 🔄 **自动版本管理** - GitHub Actions 自动化版本发布
+- 🗑️ **自动清理分支** - PR 合并后自动删除已合并分支，保持仓库整洁
 
 ## 版本信息
 
@@ -23,7 +25,7 @@
 | Node.js | >= 16.x |
 | Vue | ^3.5.24 |
 | Vite | ^7.2.4 |
-| Tailwind CSS | ^4.1.18 |
+| Tailwind CSS | ^3.4.1 |
 
 ### 版本更新记录
 
@@ -57,28 +59,37 @@
    ```
 
 4. **创建 Pull Request**
-   - 在 GitHub 上创建 PR 到 `main` 分支
-   - 填写 PR 描述，说明变更内容
-   - 等待代码审查和合并
+    - 在 GitHub 上创建 PR 到 `main` 分支
+    - 填写 PR 描述，说明变更内容
 
-5. **自动发布**
-   - PR 合并到 `main` 分支后，GitHub Actions 自动触发
-   - 自动更新版本号（根据提交类型）
-   - 自动生成 CHANGELOG
-   - 自动创建 Git Tag
-   - 自动创建 GitHub Release
+5. **自动审批和合并** ⭐
+    - PR 创建后，GitHub Actions 自动审批
+    - 满足条件后，PR 自动合并到 `main` 分支
+    - 无需人工干预
 
-### 自动化版本管理
+6. **自动发布**
+     - PR 合并到 `main` 分支后，GitHub Actions 自动触发
+     - 自动更新版本号（根据提交类型）
+     - 自动生成 CHANGELOG
+     - 自动创建 Git Tag
+     - 自动创建 GitHub Release
+     - **自动删除已合并的分支** ⭐（保持仓库整洁）
 
-当代码合并到 `main` 分支时，GitHub Actions 会自动：
+### 自动化流程
 
-- ✅ 分析提交信息确定版本类型（major/minor/patch）
-- ✅ 更新 `package.json` 中的版本号
-- ✅ 更新 `README.md` 版本记录
-- ✅ 生成 `CHANGELOG.md` 更新日志
-- ✅ 创建 Git Tag（vX.X.X 格式）
-- ✅ 创建 GitHub Release
-- ✅ 推送所有变更到远程仓库
+整个开发流程完全自动化：
+
+1. **PR 审批阶段** - GitHub Actions 自动审批 PR ⭐
+2. **PR 合并阶段** - 满足条件后自动合并 ⭐
+3. **版本管理阶段** - 自动更新版本和发布
+   - ✅ 分析提交信息确定版本类型（major/minor/patch）
+   - ✅ 更新 `package.json` 中的版本号
+   - ✅ 更新 `README.md` 版本记录
+   - ✅ 生成 `CHANGELOG.md` 更新日志
+   - ✅ 创建 Git Tag（vX.X.X 格式）
+   - ✅ 创建 GitHub Release
+   - ✅ 推送所有变更到远程仓库
+   - ✅ **自动删除已合并的分支** ⭐（保护 main/master 分支）
 
 ### 分支策略
 
@@ -198,7 +209,18 @@ npm run preview
 - 平板端：768px - 1023px
 - 移动端：< 768px
 
+## 文档索引
 
+| 文档 | 说明 |
+|------|------|
+| [README.md](./README.md) | 项目介绍和快速开始 |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 开发指南和提交规范 |
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | 快速启动指南 |
+| [GITHUB_SETUP.md](./GITHUB_SETUP.md) | GitHub 仓库配置完整指南 |
+| [AUTO_APPROVE_MERGE.md](./AUTO_APPROVE_MERGE.md) | 自动审批和合并功能说明 ⭐ |
+| [AUTO_DELETE_BRANCH.md](./AUTO_DELETE_BRANCH.md) | 自动删除分支功能说明 |
+| [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志 |
+| [PROJECT_INIT_REPORT.md](./PROJECT_INIT_REPORT.md) | 项目初始化报告 |
 
 ## License
 

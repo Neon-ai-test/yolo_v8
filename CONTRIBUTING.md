@@ -221,6 +221,11 @@ MAJOR.MINOR.PATCH
    - 自动创建 Release
    - 包含版本信息和变更日志
 
+8. **删除已合并分支** ⭐
+   - 自动检测合并的分支
+   - 删除远程已合并的功能分支
+   - 保护 main/master 分支不被删除
+
 ### 手动触发版本更新
 
 如果需要手动触发版本更新（不依赖提交信息），可以在 main 分支创建一个特殊提交：
@@ -235,6 +240,47 @@ git commit --allow-empty -m "chore(release): minor release"
 # 触发 patch 更新
 git commit --allow-empty -m "chore(release): patch release"
 ```
+
+### 自动删除已合并分支
+
+GitHub Actions 会在 PR 合并后自动删除已合并的分支，保持仓库整洁。
+
+#### 工作原理
+
+1. **检测合并提交**
+   - 获取最新的 merge commit
+   - 提取被合并的分支名称
+
+2. **安全性检查**
+   - 避免删除受保护分支（main/master）
+   - 仅删除功能分支（feature/*、fix/* 等）
+
+3. **自动删除**
+   - 删除远程分支
+   - 本地分支由开发者手动删除
+
+#### 保护规则
+
+以下分支**不会被自动删除**：
+- `main`
+- `master`
+- 任何以 `main` 或 `master` 开头的分支
+
+#### 手动保留分支
+
+如果需要保留某个已合并的分支（例如用于后续开发），可以：
+
+1. 在 PR 描述中添加 `[keep-branch]` 标记
+2. 在合并前手动重命名分支
+3. 事后从远程重新拉取分支
+
+#### 禁用自动删除
+
+如需禁用此功能：
+
+1. 编辑 `.github/workflows/version.yml`
+2. 注释或删除 "Delete merged branch" 步骤
+3. 提交并推送更改
 
 ## 常见问题
 
