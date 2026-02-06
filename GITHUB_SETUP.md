@@ -85,6 +85,7 @@ GitHub Actions 工作流文件已配置：
 - CHANGELOG 生成
 - Git 标签创建
 - GitHub Release 创建
+- **自动删除已合并的分支** ⭐
 
 ### 3. 查看工作流
 
@@ -139,8 +140,13 @@ git push origin feature/your-feature-name
    - 应该看到新的 Release
 
 5. **文档更新**
-   - 查看 `README.md` 和 `CHANGELOG.md`
-   - 应该有新的版本记录
+    - 查看 `README.md` 和 `CHANGELOG.md`
+    - 应该有新的版本记录
+
+6. **分支自动删除** ⭐
+    - 查看 "Code" 标签页 > "Branches"
+    - 已合并的功能分支应该已被自动删除
+    - main/master 分支保持不变
 
 ## 常见问题
 
@@ -172,6 +178,44 @@ git push origin feature/your-feature-name
 ### Q: 如何修改 Actions 工作流
 
 编辑 `.github/workflows/version.yml` 文件，修改后提交即可。
+
+### Q: 如何禁用自动删除分支功能
+
+编辑 `.github/workflows/version.yml`，注释或删除 "Delete merged branch" 步骤：
+
+```yaml
+# - name: Delete merged branch
+#   run: |
+#     # ... 删除逻辑
+```
+
+### Q: 为什么我的分支没有被删除？
+
+可能的原因：
+1. 分支名称是 `main` 或 `master`（受保护）
+2. 分支不是通过 PR 合并的
+3. Actions 工作流运行失败
+4. 分支在删除前已被手动删除
+
+查看 Actions 日志获取详细信息。
+
+### Q: 如何保留已合并的分支
+
+如果需要保留某个分支，可以：
+
+1. **在本地保留分支**：
+   ```bash
+   # 合并前，在本地保留分支的副本
+   git branch backup/my-feature my-feature
+   ```
+
+2. **从远程重新创建**：
+   ```bash
+   # 合并后，从远程获取分支
+   git fetch origin origin/feature-branch:feature-branch
+   ```
+
+3. **禁用自动删除**：临时禁用自动删除功能
 
 ## 下一步
 
