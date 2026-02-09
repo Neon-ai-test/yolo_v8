@@ -1,3 +1,25 @@
+## [0.1.0] - 2026-02-09
+
+### 提交记录
+- Merge pull request #7 from Neon-ai-test/fix-修复twcss依赖
+- ci: 优化自动合并和版本管理流程
+- Merge pull request #6 from Neon-ai-test/fix-修复twcss依赖
+- ci(workflows): 优化自动合并工作流并移除重复分支删除逻辑
+- Merge pull request #5 from Neon-ai-test/fix-修复twcss依赖
+- ci: 更新工作流使用 VERSION_TOKEN 并移除冗余配置
+- Merge pull request #4 from Neon-ai-test/fix-修复twcss依赖
+- ci: 添加Git配置并更新发布工作流
+- Merge pull request #3 from Neon-ai-test/fix-修复twcss依赖
+- ci: 移除独立的auto-approve工作流并优化版本管理流程
+- Merge pull request #2 from Neon-ai-test/fix-修复twcss依赖
+- feat(ci): 添加自动审批和合并工作流
+- feat: 添加并配置Tailwind CSS及相关依赖
+- docs: 更新 README 添加自动删除分支功能说明
+- docs: 添加自动删除分支功能说明文档
+- feat: 添加自动删除已合并分支功能
+- docs: 添加项目初始化完成报告
+- docs: 添加 GitHub 仓库配置指南
+
 # 更新日志
 
 本文档记录了项目的所有重要变更。
