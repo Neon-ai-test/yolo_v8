@@ -54,12 +54,16 @@ jobs:
           if [ -s /tmp/commits.txt ]; then
             grep -v "chore(release): bump version" /tmp/commits.txt > /tmp/commits_filtered.txt || true
             if [ -s /tmp/commits_filtered.txt ]; then
-              mv /tmp/commits_filtered.txt /tmp/commits.txt
+              cp /tmp/commits_filtered.txt /tmp/commits.txt
+              rm -f /tmp/commits_filtered.txt
               echo "has_commits=true" >> $GITHUB_OUTPUT
               echo "Has commits (filtered)"
+              echo "Filtered commits:"
+              cat /tmp/commits.txt
             else
               echo "has_commits=false" >> $GITHUB_OUTPUT
               echo "No commits after filtering"
+              rm -f /tmp/commits_filtered.txt
             fi
           else
             echo "has_commits=false" >> $GITHUB_OUTPUT
@@ -139,10 +143,10 @@ jobs:
           # 在README顶部添加版本更新记录
           if [ -f README.md ] && grep -q "## 版本更新记录" README.md; then
             # 如果已存在版本记录部分，在后面添加新版本
-            sed -i "/## 版本更新记录/a\\n### $NEW_VERSION - $RELEASE_DATE\\n\\n待补充更新内容...\\n" README.md || echo "Failed to update README (may already exist)"
+            perl -i -pe "s/(## 版本更新记录)/\$1\n\n### $NEW_VERSION - $RELEASE_DATE\n\n待补充更新内容.../e" README.md || echo "Failed to update README (may already exist)"
           elif [ -f README.md ]; then
             # 如果不存在，添加到文件末尾
-            echo -e "\\n\\n## 版本更新记录\\n\\n### $NEW_VERSION - $RELEASE_DATE\\n\\n待补充更新内容..." >> README.md
+            printf "\n\n## 版本更新记录\n\n### $NEW_VERSION - $RELEASE_DATE\n\n待补充更新内容...\n" >> README.md
           fi
           
           echo "Updated README.md"
@@ -154,21 +158,14 @@ jobs:
           RELEASE_DATE=$(date +"%Y-%m-%d")
           COMMITS=$(cat /tmp/commits.txt)
 
-          # 创建changelog条目
-          cat > CHANGELOG_TMP.md << 'EOF'
-          ## [NEW_VERSION] - RELEASE_DATE
-
-          ### 提交记录
-          COMMITS_LIST
-
-          EOF
-          
-          # 替换占位符
-          sed -i "s/NEW_VERSION/$NEW_VERSION/g" CHANGELOG_TMP.md
-          sed -i "s/RELEASE_DATE/$RELEASE_DATE/g" CHANGELOG_TMP.md
-          echo "$COMMITS" | sed 's/^/- /' > /tmp/formatted_commits.txt
-          sed -i '/COMMITS_LIST/r /tmp/formatted_commits.txt' CHANGELOG_TMP.md
-          sed -i '/^COMMITS_LIST$/d' CHANGELOG_TMP.md
+          # 创建changelog条目 - 直接使用变量
+          {
+            echo "## [$NEW_VERSION] - $RELEASE_DATE"
+            echo ""
+            echo "### 提交记录"
+            echo "$COMMITS" | sed 's/^/- /'
+            echo ""
+          } > CHANGELOG_TMP.md
 
           # 如果CHANGELOG存在，将新内容插入到开头
           if [ -f CHANGELOG.md ]; then
@@ -178,7 +175,7 @@ jobs:
             mv CHANGELOG_TMP.md CHANGELOG.md
           fi
           
-          rm -f CHANGELOG_TMP.md /tmp/formatted_commits.txt
+          rm -f CHANGELOG_TMP.md
           echo "Updated CHANGELOG.md"
 
       - name: Create version bump PR
@@ -186,6 +183,13 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.new-version.outputs.version }}"
           BRANCH_NAME="bump-version-v${NEW_VERSION}"
+          
+          echo "Creating version bump PR for version: $NEW_VERSION"
+          echo "Branch name: $BRANCH_NAME"
+          
+          # 检查文件状态
+          echo "Checking file status..."
+          git status
           
           # 检查远程分支是否存在，如果存在则删除
           if git ls-remote --heads origin $BRANCH_NAME | grep -q $BRANCH_NAME; then
@@ -214,28 +218,40 @@ jobs:
           script: |
             const version = "${{ steps.new-version.outputs.version }}";
             const branchName = `bump-version-v${version}`;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
             
-            // 创建PR
-            const prResult = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `chore(release): bump version to ${version}`,
-              head: branchName,
-              base: 'main',
-              body: `## Version Bump: ${version}\n\nThis PR automatically updates the version to ${version}.\n\nAuto-merge enabled.`,
-            });
-            
-            console.log(`Created PR #${prResult.data.number}`);
-            
-            // 添加automerge标签
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prResult.data.number,
-              labels: ['automerge']
-            });
-            
-            console.log(`Added automerge label to PR #${prResult.data.number}`);
+            try {
+              // 创建PR
+              const prResult = await github.rest.pulls.create({
+                owner: owner,
+                repo: repo,
+                title: `chore(release): bump version to ${version}`,
+                head: branchName,
+                base: 'main',
+                body: `## Version Bump: ${version}\n\nThis PR automatically updates the version to ${version}.\n\nAuto-merge enabled.`,
+              });
+              
+              console.log(`Created PR #${prResult.data.number}`);
+              
+              try {
+                // 添加automerge标签
+                await github.rest.issues.addLabels({
+                  owner: owner,
+                  repo: repo,
+                  issue_number: prResult.data.number,
+                  labels: ['automerge']
+                });
+                console.log(`Added automerge label to PR #${prResult.data.number}`);
+              } catch (labelError) {
+                console.log(`Failed to add automerge label: ${labelError.message}`);
+                console.log('You may need to create the "automerge" label in your repository');
+              }
+            } catch (prError) {
+              console.error(`Failed to create PR: ${prError.message}`);
+              console.error(`Status: ${prError.status}`);
+              throw prError;
+            }
 
       - name: Skip version bump if no commits
         if: steps.commit-messages.outputs.has_commits != 'true'
