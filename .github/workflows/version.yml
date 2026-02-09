@@ -9,7 +9,7 @@ permissions:
   contents: write
   pull-requests: write
 
-  jobs:
+jobs:
   version-bump:
     runs-on: ubuntu-latest
     steps:
@@ -186,34 +186,6 @@ permissions:
           draft: false
           prerelease: false
           generate_release_notes: false
-
-      - name: Delete merged branch
-        run: |
-          # 获取最新的merge commit信息
-          LATEST_MERGE_COMMIT=$(git log --merges -1 --format="%H %s")
-          echo "Latest merge commit: $LATEST_MERGE_COMMIT"
-          
-          # 提取被合并的分支名称
-          # Merge pull request #123 from user/feature-branch
-          # 提取: user/feature-branch
-          if echo "$LATEST_MERGE_COMMIT" | grep -q "Merge pull request"; then
-            MERGED_BRANCH=$(echo "$LATEST_MERGE_COMMIT" | sed 's/.*from \([^ ]*\).*/\1/')
-            echo "Merged branch: $MERGED_BRANCH"
-            
-            # 检查是否为有效的分支名称（避免删除main等受保护分支）
-            if [ ! -z "$MERGED_BRANCH" ] && [ "$MERGED_BRANCH" != "main" ] && [ "$MERGED_BRANCH" != "master" ]; then
-              echo "Deleting remote branch: $MERGED_BRANCH"
-              
-              # 删除远程分支
-              git push origin --delete "$MERGED_BRANCH" || echo "Failed to delete branch $MERGED_BRANCH (may not exist or already deleted)"
-              
-              echo "Branch $MERGED_BRANCH deleted successfully"
-            else
-              echo "Skipping deletion of branch: $MERGED_BRANCH (protected branch or invalid name)"
-            fi
-          else
-            echo "No merge commit found, skipping branch deletion"
-          fi
 
       - name: Display version info
         run: |
