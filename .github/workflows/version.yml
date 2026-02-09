@@ -1,9 +1,8 @@
 name: Version Management
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types: [closed]
 
 permissions:
   contents: write
@@ -11,6 +10,7 @@ permissions:
 
 jobs:
   version-bump:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && !contains(github.event.pull_request.title, 'bump version')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -153,39 +153,43 @@ jobs:
           rm -f CHANGELOG_TMP.md
           echo "Updated CHANGELOG.md"
 
-      - name: Create git tag
+      - name: Create version bump PR
         run: |
           NEW_VERSION="${{ steps.new-version.outputs.version }}"
-          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
-          echo "Created tag: v$NEW_VERSION"
-
-      - name: Commit and push changes
-        run: |
+          BRANCH_NAME="bump-version-v${NEW_VERSION}"
+          
+          # 创建新分支
+          git checkout -b $BRANCH_NAME
+          
+          # 提交更改
           git add package.json README.md CHANGELOG.md
-          git commit -m "chore(release): bump version to ${{ steps.new-version.outputs.version }}"
+          git commit -m "chore(release): bump version to $NEW_VERSION"
+          
+          # 推送分支
+          git push origin $BRANCH_NAME
+          
+          echo "Created branch: $BRANCH_NAME"
 
-          git push origin main
-          git push origin "v${{ steps.new-version.outputs.version }}"
-
-          echo "Changes pushed successfully"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Create Pull Request
+        uses: actions/github-script@v7
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.VERSION_TOKEN }}
         with:
-          tag_name: v${{ steps.new-version.outputs.version }}
-          name: Release v${{ steps.new-version.outputs.version }}
-          body: |
-            ## 更新内容 v${{ steps.new-version.outputs.version }}
-
-            发布日期: $(date +"%Y-%m-%d")
-
-            ### 变更日志
-            查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) 获取详细信息
-          draft: false
-          prerelease: false
-          generate_release_notes: false
+          script: |
+            const version = "${{ steps.new-version.outputs.version }}";
+            const branchName = `bump-version-v${version}`;
+            
+            const result = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore(release): bump version to ${version}`,
+              head: branchName,
+              base: 'main',
+              body: `## Version Bump: ${version}\n\nThis PR automatically updates the version to ${version}.\n\nAuto-merge enabled.`,
+              labels: ['automerge']
+            });
+            
+            console.log(`Created PR #${result.data.number}`);
 
       - name: Display version info
         run: |
@@ -195,5 +199,65 @@ jobs:
           echo "  旧版本: ${{ steps.current-version.outputs.version }}"
           echo "  新版本: ${{ steps.new-version.outputs.version }}"
           echo "  更新类型: ${{ steps.version-type.outputs.type }}"
-          echo "  Git标签: v${{ steps.new-version.outputs.version }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  create-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && contains(github.event.pull_request.title, 'bump version')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.VERSION_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract version from PR title
+        id: extract-version
+        run: |
+          VERSION=$(echo "${{ github.event.pull_request.title }}" | grep -oP 'to \K[0-9]+\.[0-9]+\.[0-9]+')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create git tag
+        run: |
+          VERSION="${{ steps.extract-version.outputs.version }}"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          echo "Created tag: v$VERSION"
+
+      - name: Push tag
+        run: |
+          VERSION="${{ steps.extract-version.outputs.version }}"
+          git push origin "v$VERSION"
+          echo "Pushed tag: v$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.extract-version.outputs.version }}
+          name: Release v${{ steps.extract-version.outputs.version }}
+          body: |
+            ## 更新内容 v${{ steps.extract-version.outputs.version }}
+
+            发布日期: $(date +"%Y-%m-%d")
+
+            ### 变更日志
+            查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) 获取详细信息
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+
+      - name: Display release info
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  发布完成"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  版本: v${{ steps.extract-version.outputs.version }}"
+          echo "  Git标签: v${{ steps.extract-version.outputs.version }}"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
